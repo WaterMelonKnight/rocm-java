@@ -2,6 +2,7 @@ package io.github.watermelonknight.rocm;
 
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -42,6 +43,23 @@ class HipRuntimeTest {
     }
 
     @Test
+    void remainsOpenWhenFreeFailsAndCanRetryClose() {
+        FakeApi api = new FakeApi();
+        api.freeResult = 101;
+        HipMemory memory = HipRuntime.forTesting(api).malloc(16);
+
+        assertThrows(HipException.class, memory::close);
+        assertEquals(1, api.freeCalls);
+        assertFalse(memory.isClosed());
+
+        api.freeResult = 0;
+        memory.close();
+        memory.close();
+        assertTrue(memory.isClosed());
+        assertEquals(2, api.freeCalls);
+    }
+
+    @Test
     void validatesCopyBounds() {
         HipRuntime runtime = HipRuntime.forTesting(new FakeApi());
         try (HipMemory memory = runtime.malloc(4)) {
@@ -79,6 +97,7 @@ class HipRuntimeTest {
         private int hostToDeviceCalls;
         private int deviceToHostCalls;
         private int setDeviceResult;
+        private int freeResult;
 
         @Override public int getDeviceCount(MemorySegment count) {
             count.set(ValueLayout.JAVA_INT, 0, 1);
@@ -93,7 +112,7 @@ class HipRuntimeTest {
             pointer.set(ValueLayout.ADDRESS, 0, MemorySegment.ofAddress(0x1000));
             return 0;
         }
-        @Override public int free(MemorySegment pointer) { freeCalls++; return 0; }
+        @Override public int free(MemorySegment pointer) { freeCalls++; return freeResult; }
         @Override public int memcpy(MemorySegment destination, MemorySegment source, long bytes, int kind) {
             if (kind == HipMemcpyKind.HOST_TO_DEVICE.nativeValue()) {
                 MemorySegment.copy(source, 0, MemorySegment.ofArray(deviceMemory), 0, bytes);

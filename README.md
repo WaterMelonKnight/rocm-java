@@ -49,7 +49,7 @@ First inspect the host, then explicitly run the integration executable:
 
 ```bash
 ./scripts/check-rocm.sh
-mvn verify -Procm
+JDK_JAVA_OPTIONS="--enable-native-access=ALL-UNNAMED" mvn verify -Procm
 ```
 
 The smoke test requires at least one device, selects device 0, allocates 4096 bytes, copies a known
@@ -91,8 +91,10 @@ try (HipMemory memory = runtime.malloc(4096)) {
 }
 ```
 
-`close()` invokes `hipFree` at most once. Operations reject closed allocations. Always use
-try-with-resources: Java garbage collection does **not** safely or promptly release GPU memory.
+After `close()` successfully invokes `hipFree`, repeated closes are harmless and operations reject
+the closed allocation. A failed `hipFree` leaves the allocation open so closing can be retried.
+Always use try-with-resources: Java garbage collection does **not** safely or promptly release GPU
+memory.
 
 ## Current limitations
 

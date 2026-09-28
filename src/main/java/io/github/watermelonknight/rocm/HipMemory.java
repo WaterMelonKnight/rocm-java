@@ -1,7 +1,6 @@
 package io.github.watermelonknight.rocm;
 
 import java.lang.foreign.MemorySegment;
-import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * An owning HIP device allocation. Always use try-with-resources; garbage collection is not a
@@ -11,7 +10,7 @@ public final class HipMemory implements AutoCloseable {
     private final HipRuntime runtime;
     private final MemorySegment address;
     private final long byteSize;
-    private final AtomicBoolean closed = new AtomicBoolean();
+    private volatile boolean closed;
 
     HipMemory(HipRuntime runtime, MemorySegment address, long byteSize) {
         this.runtime = runtime;
@@ -24,7 +23,7 @@ public final class HipMemory implements AutoCloseable {
     }
 
     public boolean isClosed() {
-        return closed.get();
+        return closed;
     }
 
     HipRuntime runtime() {
@@ -37,16 +36,18 @@ public final class HipMemory implements AutoCloseable {
     }
 
     void requireOpen() {
-        if (closed.get()) {
+        if (closed) {
             throw new IllegalStateException("HIP memory has been closed");
         }
     }
 
-    /** Frees this allocation exactly once. Repeated calls are harmless. */
+    /** Frees this allocation; after a successful free, repeated calls are harmless. */
     @Override
-    public void close() {
-        if (closed.compareAndSet(false, true)) {
-            runtime.free(address);
+    public synchronized void close() {
+        if (closed) {
+            return;
         }
+        runtime.free(address);
+        closed = true;
     }
 }

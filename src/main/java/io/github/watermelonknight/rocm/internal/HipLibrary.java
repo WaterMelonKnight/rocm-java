@@ -18,6 +18,7 @@ public final class HipLibrary {
         String rocmPath = System.getenv("ROCM_PATH");
         if (rocmPath != null && !rocmPath.isBlank()) {
             paths.add(Path.of(rocmPath, "lib", "libamdhip64.so"));
+            paths.add(Path.of(rocmPath, "lib64", "libamdhip64.so"));
         }
         paths.add(Path.of("/opt/rocm/lib/libamdhip64.so"));
         paths.add(Path.of("/opt/rocm/lib64/libamdhip64.so"));
