@@ -1,0 +1,19 @@
+target/
+build/
+out/
+.idea/
+.vscode/
+.DS_Store
+*.iml
+
+# Generated JVM artifacts and vendored dependency binaries
+*.class
+*.jar
+
+# Generated native and ROCm/GPU artifacts
+*.so
+*.dll
+*.dylib
+*.o
+*.a
+*.hsaco
